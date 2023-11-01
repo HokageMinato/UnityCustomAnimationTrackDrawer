@@ -3,7 +3,7 @@
 A simple property drawer which draws an animation track according to the data fed.
   
 Demo:
-![Demo Gif]( https://i.ibb.co/4PCY96v/ezgif-com-optimize-1.gif )
+![Demo Snip]( https://i.ibb.co/CMSw0BH/Animation-Track.png )
 
 Usecases:
 Set FrameData array to display custom timelines and highlights using FrameEvents.
