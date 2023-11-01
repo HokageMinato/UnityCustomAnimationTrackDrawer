@@ -39,6 +39,36 @@ namespace FrameTrackDrawer.Runtime
         }
         #endregion
 
+        #region PUBLIC_METHODS
+        public void AddFrameEventText(int frameIndex, string text) 
+        {
+            FrameEvent existingRecord = frameEvents.FirstOrDefault(xEvent => xEvent.frameIndex == frameIndex);
+            if (existingRecord == null)
+            {
+                frameEvents = frameEvents.Append(new FrameEvent() { eventName = text, frameIndex = frameIndex}).ToArray();
+                return;
+            }
+            else 
+            {
+                existingRecord.eventName += $" \n {text}";
+            }
+
+        }
+
+        public void RemoveFrameEventText(int frameIndex, string text)
+        {
+            FrameEvent existingRecord = frameEvents.FirstOrDefault(xEvent => xEvent.frameIndex == frameIndex);
+            if (existingRecord == null)
+            {
+                Debug.Log("RC NF");
+                return;
+            }
+
+            existingRecord.eventName = existingRecord.eventName.Replace($"\n {text}", string.Empty);
+
+        }
+        #endregion
+
         #region PRIVATE_METHODS
         private void ValidateFrameEvents(FrameEvent[] frameEvents,Action onValidationSuccess)
         {

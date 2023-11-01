@@ -260,12 +260,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   frameTrackData:
-    totalFrames: 8
+    totalFrames: 5
     frameEvents:
     - frameIndex: 0
       eventName: Hitbox Overlap
     - frameIndex: 3
       eventName: Animation Start
+    - frameIndex: 3
+      eventName: Animation End
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -15,11 +15,26 @@ namespace FrameTrackDrawer.Runtime
                                                                  });
 
 
-            void Start()
-            {
 
-                
-            }
+
+        [Space(30)]
+        [Header("Text Add Demo")]
+        public string text;
+        public int frame;
+
+
+        [ContextMenu(nameof(AddEvent))]
+        public void AddEvent() 
+        {
+            frameTrackData.AddFrameEventText(frame, text);
+        }
+        
+        [ContextMenu(nameof(RemoveEvent))]
+        public void RemoveEvent() 
+        {
+            frameTrackData.RemoveFrameEventText(frame, text);
+        }
+
 
     }
 }
