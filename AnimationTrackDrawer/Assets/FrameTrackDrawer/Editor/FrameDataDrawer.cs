@@ -145,8 +145,11 @@ namespace FrameTrackDrawer.Editor
             Rect frameRect = new Rect(xOffset + barRectWidth, position.y, currentFrameWidth - barRectWidth, BOX_HEIGHT);
 
             Color originalBackgroundColor = GUI.backgroundColor;
+            Color originalContentColor = GUI.contentColor;
             GUI.backgroundColor = GetBarColor(frameIndexI);
+            GUI.contentColor = Color.white;
             EditorGUI.LabelField(frameRect, new GUIContent(label, GetFrameTooltip(frameIndexI)), GetFrameBoxStyle());
+            GUI.contentColor = originalContentColor;
             GUI.backgroundColor = originalBackgroundColor;  // Reset background color to original
             xOffset += currentFrameWidth;
         }
