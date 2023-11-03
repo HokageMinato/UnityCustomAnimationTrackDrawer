@@ -45,12 +45,12 @@ namespace FrameTrackDrawer.Runtime
             FrameEvent existingRecord = frameEvents.FirstOrDefault(xEvent => xEvent.frameIndex == frameIndex);
             if (existingRecord == null)
             {
-                frameEvents = frameEvents.Append(new FrameEvent() { eventName = text, frameIndex = frameIndex}).ToArray();
+                frameEvents = frameEvents.Append(new FrameEvent() { eventsName = new string[1] { text }, frameIndex = frameIndex}).ToArray();
                 return;
             }
             else 
             {
-                existingRecord.eventName += $" \n {text}";
+                existingRecord.eventsName.Append($" \n {text}"); 
             }
 
         }
@@ -64,7 +64,7 @@ namespace FrameTrackDrawer.Runtime
                 return;
             }
 
-            existingRecord.eventName = existingRecord.eventName.Replace($"\n {text}", string.Empty);
+            existingRecord.eventsName = existingRecord.eventsName.Where(xEventEntry => !xEventEntry.Equals($"\n {text}")).ToArray();
 
         }
         #endregion
@@ -111,11 +111,11 @@ namespace FrameTrackDrawer.Runtime
     public class FrameEvent 
     {
         public int frameIndex;
-        public string eventName;
+        public string[] eventsName;
 
         #region EDITOR_ACCESSORS
 #if UNITY_EDITOR
-        public static string EventNameFieldName => nameof(eventName);
+        public static string FrameEventsNameFieldName => nameof(eventsName);
         public static string FrameIndexFieldName => nameof(frameIndex);
 #endif
         #endregion

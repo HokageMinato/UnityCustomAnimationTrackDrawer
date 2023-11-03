@@ -10,8 +10,8 @@ namespace FrameTrackDrawer.Runtime
         [SerializeField] private FrameTrackData frameTrackData = new FrameTrackData(20,
                                                                  new FrameEvent[2] 
                                                                  {   
-                                                                    new FrameEvent(){ eventName = "Mark1" , frameIndex = 0 },
-                                                                    new FrameEvent(){ eventName = "Mark3" , frameIndex = 2 },
+                                                                    new FrameEvent(){ eventsName = new string[]{ "Mark1" } , frameIndex = 0 },
+                                                                    new FrameEvent(){ eventsName = new string[] {"Mark3" } , frameIndex = 2 },
                                                                  });
 
 

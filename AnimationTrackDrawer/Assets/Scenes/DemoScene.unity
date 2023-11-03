@@ -243,7 +243,7 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -260,14 +260,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   frameTrackData:
-    totalFrames: 5
+    totalFrames: 7
     frameEvents:
-    - frameIndex: 0
-      eventName: Hitbox Overlap
+    - frameIndex: 1
+      eventsName:
+      - Mark1
+      - Mark1
+      - Mark1
+      - Mark1
+      - Mark1
+      - Mark1
+      - Mark1
     - frameIndex: 3
-      eventName: Animation Start
-    - frameIndex: 3
-      eventName: Animation End
+      eventsName:
+      - Mark3
+    - frameIndex: 5
+      eventsName:
+      - Mark3
+  text: IFramesStart
+  frame: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

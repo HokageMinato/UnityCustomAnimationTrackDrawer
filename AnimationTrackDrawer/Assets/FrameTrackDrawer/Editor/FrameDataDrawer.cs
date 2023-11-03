@@ -2,7 +2,11 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using FrameTrackDrawer.Runtime;
-
+using UnityEngine.UIElements;
+using System;
+using NUnit.Framework;
+using System.Runtime.ConstrainedExecution;
+using System.Linq;
 
 namespace FrameTrackDrawer.Editor
 {
@@ -15,8 +19,10 @@ namespace FrameTrackDrawer.Editor
         private const float MAX_FRAME_WIDTH = 50f;
         private const float MIN_FRAME_WIDTH = 14f;
         private const float WIDTH_INCREMENT_PER_DIGIT = 5f;
-        private const float SCROLLBAR_HEIGHT = 12f;
-        private const string EMPTY = "";
+        private const float HOVERING_BOX_HEIGHT = 17;
+        private const float SCROLLBAR_HEIGHT = 2f;
+        private const string EMPTY_STRING = "";
+        private static readonly string[] EMPTY_EVENT_MESSAGE = new string[0];
         #endregion
 
 
@@ -31,13 +37,17 @@ namespace FrameTrackDrawer.Editor
         private Color disabledBarColor = Color.gray;  // Dark grey
         private Color enabledBarColor = Color.cyan;
         private List<FrameEvent> cachedFrameEvents = new List<FrameEvent>();
-        private const string EMPTY_EVENT_MESSAGE = "Empty";
-        
+        private List<Rect> frameRects = new List<Rect>();
+
+        GUIStyle tooltipBoxStyle;
+
+        private Color originalContentColor;
+        private Color originalBackgroundColor;
         #endregion
 
 
         #region PRIVATE_PROPERTIES
-        private float HeightWithScrollbar => BOX_HEIGHT + SCROLLBAR_HEIGHT;
+        private float CalculatedPropertyHeight = 0 ;
         #endregion
 
 
@@ -49,13 +59,26 @@ namespace FrameTrackDrawer.Editor
             float frameControlWidth = CalculateTotalWidth(totalFramesPropertyCached);
             float guiWidth = EditorGUIUtility.currentViewWidth / 2f;
 
-            if (frameControlWidth < guiWidth)
-                return BOX_HEIGHT;
 
-            return HeightWithScrollbar;
+            float calculatedHeight = BOX_HEIGHT + SCROLLBAR_HEIGHT;
+            
+            if (frameControlWidth < guiWidth)
+                calculatedHeight = BOX_HEIGHT;
+
+
+            for (int i = 0; i < totalFramesPropertyCached; i++)
+            {
+                var tooltipTexts = GetFrameTooltipTexts(i);
+                foreach (var tooltipText in tooltipTexts)
+                    calculatedHeight += HOVERING_BOX_HEIGHT;
+
+            }
+
+            CalculatedPropertyHeight = calculatedHeight;
+            return CalculatedPropertyHeight;
         }
 
-       
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, targetSerializedPropertyCached);
@@ -63,8 +86,11 @@ namespace FrameTrackDrawer.Editor
             DrawFrameContainerBox(position);
             HandleZooming(Event.current);
             HandleScrolling(position);
+           
             EditorGUI.EndProperty();
         }
+
+
         #endregion
 
 
@@ -76,25 +102,57 @@ namespace FrameTrackDrawer.Editor
             targetFrameEventPropertyCached = targetSerializedPropertyCached.FindPropertyRelative(FrameTrackData.FrameEventsFieldName);
             totalFramesPropertyCached = targetSerializedPropertyCached.FindPropertyRelative(FrameTrackData.TotalFramesFieldName).intValue;
             CacheFrameEvents();
+            CacheHoveringTextBoxStyle();
+        }
+
+        private void CacheHoveringTextBoxStyle()
+        {
+            tooltipBoxStyle = new GUIStyle((GUIStyle)"ProfilerBadge")
+            {
+                font = EditorStyles.miniButton.font,
+                fontStyle = EditorStyles.miniButton.fontStyle,
+                fontSize = EditorStyles.miniButton.fontSize,
+                alignment = TextAnchor.MiddleCenter
+            };
         }
 
         private void CacheFrameEvents()
         {
             SerializedProperty frameEventsProperty = targetFrameEventPropertyCached;
             int arraySize = frameEventsProperty.arraySize;
-            
-            cachedFrameEvents.Clear();
 
-            for (int i = 0; i < arraySize; i++)
+
+            if (cachedFrameEvents.Count != arraySize)
+            {
+                cachedFrameEvents = new List<FrameEvent>(arraySize);
+                for (int i = 0; i < arraySize; i++)
+                    cachedFrameEvents.Add(new FrameEvent()
+                    {
+                        eventsName = new string[0]
+                    }); ;
+            }
+
+
+            for (int i = 0; i < cachedFrameEvents.Count; i++)
             {
                 SerializedProperty frameEventProperty = frameEventsProperty.GetArrayElementAtIndex(i);
-                cachedFrameEvents.Add(new FrameEvent 
-                { 
-                    frameIndex = frameEventProperty.FindPropertyRelative(FrameEvent.FrameIndexFieldName).intValue, 
-                    eventName = frameEventProperty.FindPropertyRelative(FrameEvent.EventNameFieldName).stringValue
-                });
+                cachedFrameEvents[i].frameIndex = frameEventProperty.FindPropertyRelative(FrameEvent.FrameIndexFieldName).intValue;
+                GetEventValuesNonAlloc(frameEventProperty, ref cachedFrameEvents[i].eventsName);
             }
         }
+
+        private void GetEventValuesNonAlloc(SerializedProperty frameEventProperty, ref string[] contentsArray)
+        {
+            var eventProps = frameEventProperty.FindPropertyRelative(FrameEvent.FrameEventsNameFieldName);
+            int arrayLen = eventProps.arraySize;
+            if (contentsArray.Length != arrayLen)
+                Array.Resize(ref contentsArray, arrayLen);
+
+            for (int i = 0; i < arrayLen; i++)
+                contentsArray[i] = eventProps.GetArrayElementAtIndex(i).stringValue;
+
+        }
+
 
         private Rect DrawLabel(Rect position, GUIContent label)
         {
@@ -103,7 +161,7 @@ namespace FrameTrackDrawer.Editor
 
         private void DrawFrameContainerBox(Rect position)
         {
-            GUI.Box(position, EMPTY, GUI.skin.box);
+            GUI.Box(position, EMPTY_STRING, GUI.skin.box);
         }
 
         private void HandleZooming(Event currentEvent)
@@ -121,67 +179,123 @@ namespace FrameTrackDrawer.Editor
             GUI.BeginGroup(position);
             _totalWidth = CalculateTotalWidth(totalFramesPropertyCached);
             Rect contentRect = new Rect(0, 0, _totalWidth, BOX_HEIGHT);
-            _scrollPosition = GUI.BeginScrollView(new Rect(0, 0, position.width, HeightWithScrollbar), _scrollPosition, contentRect, false, false, GUI.skin.horizontalScrollbar, GUIStyle.none);
-            DrawFrameBoxes(contentRect, totalFramesPropertyCached);
+            _scrollPosition = GUI.BeginScrollView(new Rect(0, 0, position.width, CalculatedPropertyHeight), _scrollPosition, contentRect, false, false, GUI.skin.horizontalScrollbar, GUIStyle.none);
+            DrawFrameBoxes(contentRect);
+            DrawHoveringBlocks(contentRect);
             GUI.EndScrollView();
             GUI.EndGroup();
+
+            
         }
 
-        private void DrawFrameBoxes(Rect position, int totalFrames)
+        private void DrawFrameBoxes(Rect position)
         {
-            float xOffset = 0;
-            for (int i = 0; i < totalFrames; i++)
+            if (frameRects.Count != totalFramesPropertyCached)
             {
-                float barWidth = DrawEventBar(position,  xOffset, i);
-                DrawFrameBox(position,ref xOffset, i,barWidth);
+                if (frameRects == null)
+                    frameRects = new List<Rect>(totalFramesPropertyCached);
+                else
+                    frameRects.Clear();
+
+                for (int i = 0; i < totalFramesPropertyCached; i++)
+                    frameRects.Add(new Rect(0, 0, 100, 100));
+            }
+
+            float xOffset = 0;
+            for (int i = 0; i < totalFramesPropertyCached; i++)
+            {
+                string iStr = i.ToString();
+                float currentFrameWidth = _singleFrameBoxWidth + iStr.Length * WIDTH_INCREMENT_PER_DIGIT;
+                Color currentBarColor = GetBarColor(i);
+                DrawEventBar(position,currentBarColor, xOffset);
+                frameRects[i] = DrawFrameBox(position,currentBarColor,xOffset,currentFrameWidth ,iStr);
+                xOffset += currentFrameWidth;
             }
         }
 
-        private void DrawFrameBox(Rect position,ref float xOffset, int frameIndexI,  float barRectWidth)
+        private void DrawEventBar(Rect position,Color currentBarColor , float xOffset)
         {
-            string label = frameIndexI.ToString();
-            float currentFrameWidth = _singleFrameBoxWidth + label.Length * WIDTH_INCREMENT_PER_DIGIT;
-
-            Rect frameRect = new Rect(xOffset + barRectWidth, position.y, currentFrameWidth - barRectWidth, BOX_HEIGHT);
-
-            Color originalBackgroundColor = GUI.backgroundColor;
-            Color originalContentColor = GUI.contentColor;
-            GUI.backgroundColor = GetBarColor(frameIndexI);
-            GUI.contentColor = Color.white;
-            EditorGUI.LabelField(frameRect, new GUIContent(label, GetFrameTooltip(frameIndexI)), GetFrameBoxStyle());
-            GUI.contentColor = originalContentColor;
-            GUI.backgroundColor = originalBackgroundColor;  // Reset background color to original
-            xOffset += currentFrameWidth;
+            Rect barRect = new Rect(xOffset, position.y, BAR_WIDTH, BOX_HEIGHT);
+            EditorGUI.DrawRect(barRect, currentBarColor);
         }
 
-        private GUIStyle GetFrameBoxStyle() 
+        private Rect DrawFrameBox(Rect position, Color currentBarColor, float x, float frameWidth,string frameLabel)
         {
-            return  new GUIStyle(GUI.skin.box)
+            Rect frameRect = new Rect(x, position.y, frameWidth, BOX_HEIGHT);
+            ApplyGUIColor(Color.white, currentBarColor);
+            EditorGUI.LabelField(frameRect, new GUIContent(frameLabel), GetFrameBoxStyle());
+            RevertGUIColor();
+            return frameRect;
+        }
+
+        private void DrawHoveringBlocks(Rect position)
+        {
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            for (int i = 0; i < frameRects.Count; i++)
+            {
+                var tooltipTexts = GetFrameTooltipTexts(i);
+                var frameRect = frameRects[i];
+
+                foreach (var tooltipText in tooltipTexts)
+                    DrawHoveringTextBlock(ref frameRect, tooltipText);
+
+            }
+        }
+
+        private void DrawHoveringTextBlock(ref Rect frameRect, string content)
+        {
+            float width =  frameRect.width;
+            float tooltipX = frameRect.x + frameRect.width / 2 - width / 2;
+            float tooltipY = frameRect.y + frameRect.height;
+            Rect tooltipRect = new Rect(tooltipX, tooltipY, width, HOVERING_BOX_HEIGHT);
+            tooltipBoxStyle.Draw(tooltipRect, content, false, false, false, false);
+            frameRect.y += HOVERING_BOX_HEIGHT;
+        }
+
+        private void ApplyGUIColor(Color newContentColor, Color newBackgroundColor)
+        {
+            originalBackgroundColor = GUI.backgroundColor;
+            originalContentColor = GUI.contentColor;
+
+            GUI.backgroundColor = newBackgroundColor;
+            GUI.contentColor = newContentColor;
+        }
+
+        private float HoveringBoxYOffetFromHeight()
+        {
+            return (HOVERING_BOX_HEIGHT + 8) / 2f;
+        }
+
+        private void RevertGUIColor()
+        {
+            GUI.backgroundColor = originalBackgroundColor;
+            GUI.contentColor = originalContentColor;
+        }
+
+        private GUIStyle GetFrameBoxStyle()
+        {
+            return new GUIStyle(GUI.skin.box)
             {
                 alignment = TextAnchor.MiddleCenter
             };
         }
 
-        private float DrawEventBar(Rect position,  float xOffset, int frameIndexI)
-        {
-            Color currentBarColor = GetBarColor(frameIndexI);
-            Rect barRect = new Rect(xOffset, position.y, BAR_WIDTH, BOX_HEIGHT);
-            EditorGUI.DrawRect(barRect, currentBarColor);
-            return barRect.width;
-        }
+        
 
-        private string GetFrameTooltip(int i)
+        private string[] GetFrameTooltipTexts(int i)
         {
             foreach (var frameEvent in cachedFrameEvents)
             {
                 if (frameEvent.frameIndex == i)
-                    return frameEvent.eventName;  // This can be replaced with actual tooltip text
+                    return frameEvent.eventsName;
             }
             return EMPTY_EVENT_MESSAGE;
         }
 
 
-        private Color GetBarColor( int i)
+        private Color GetBarColor(int i)
         {
             foreach (var frameEvent in cachedFrameEvents)
             {
